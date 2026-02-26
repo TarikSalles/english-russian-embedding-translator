@@ -1,330 +1,164 @@
-# \# Tradutor de Inglês para Russo com Embeddings, Procrustes e LSH
+# Tradutor de Inglês para Russo com Embeddings, Procrustes e LSH
 
-# 
+![Titulo](images/principal.png)
 
-# !\[Titulo](images/principal.png)
+Este projeto apresenta a implementação  de um **Tradutor Vetorial de Inglês para Russo**
+utilizando **Word Embeddings**, **Alinhamento Ortogonal (Procrustes)**,
+**Locality Sensitive Hashing (LSH)** e **Busca KNN Aproximada com Múltiplas Tabelas**.
 
-# 
+Todo o processo foi desenvolvido do zero, incluindo:
 
-# Este projeto apresenta a implementação  de um \*\*Tradutor Vetorial de Inglês para Russo\*\*
+- Geração de hiperplanos aleatórios
+- Implementação manual de hashing sensível à localidade
+- Construção de múltiplas tabelas hash
+- Aprendizado da matriz de transformação com Procrustes
+- Busca aproximada com KNN
+- Avaliação por similaridade de cosseno
 
-# utilizando \*\*Word Embeddings\*\*, \*\*Alinhamento Ortogonal (Procrustes)\*\*,
+O objetivo é mapear um embedding em inglês para o espaço vetorial russo e
+encontrar as palavras semanticamente mais próximas, utilizando do conceito de uma matriz de transformação.
 
-# \*\*Locality Sensitive Hashing (LSH)\*\* e \*\*Busca KNN Aproximada com Múltiplas Tabelas\*\*.
+------------------------------------------------------------------------
 
-# 
+## Instalação
 
-# Todo o processo foi desenvolvido do zero, incluindo:
+Clone o repositório:
 
-# 
+git clone https://github.com/TarikSalles/english-russian-embedding-translator
 
-# \- Geração de hiperplanos aleatórios
+Instale as dependências:
 
-# \- Implementação manual de hashing sensível à localidade
+pip install -r requirements.txt
 
-# \- Construção de múltiplas tabelas hash
+------------------------------------------------------------------------
 
-# \- Aprendizado da matriz de transformação com Procrustes
+## Dataset
 
-# \- Busca aproximada com KNN
+Foram utilizados:
 
-# \- Avaliação por similaridade de cosseno
+- Embeddings alinhados do FastText de 300 dimensões
+- Dicionário bilíngue
 
-# 
+Foram carregadas as **200.000 primeiras palavras** de cada idioma,
+das quais **5000 pares válidos** foram utilizados para treinamento.
 
-# O objetivo é mapear um embedding em inglês para o espaço vetorial russo e
+------------------------------------------------------------------------
 
-# encontrar as palavras semanticamente mais próximas, utilizando do conceito de uma matriz de transformação.
+## Representação Vetorial
 
-# 
+Cada palavra é representada por um vetor de 300 dimensões.
 
-# ------------------------------------------------------------------------
+Os vetores são normalizados para que a similaridade de cosseno
+represente apenas a direção no espaço vetorial.
 
-# 
+similaridade_cosseno(a, b) = a · b
 
-# \## Instalação
+------------------------------------------------------------------------
 
-# 
+## Locality Sensitive Hashing (LSH)
 
-# Clone o repositório:
+Foram implementados hiperplanos aleatórios para dividir o espaço vetorial
+em regiões (buckets).
 
-# 
+Cada plano define um bit do hash:
 
-# git clone https://github.com/TarikSalles/english-russian-embedding-translator
+hash_i = 1 se (plano · vetor) ≥ 0
 
-# 
+O valor hash final é obtido combinando os bits.
 
-# Instale as dependências:
+Foram utilizadas:
 
-# 
+- 10 dimensões por tabela
+- 30 tabelas hash independentes
 
-# pip install -r requirements.txt
+------------------------------------------------------------------------
 
-# 
+## Aprendizado da Matriz de Transformação
 
-# ------------------------------------------------------------------------
+Desejamos aprender uma matriz W tal que:
 
-# 
+XW ≈ Y
 
-# \## Dataset
+Onde:
 
-# 
+- X: embeddings em inglês
+- Y: embeddings em russo
 
-# Foram utilizados:
+Foi utilizado o método de **Procrustes Ortogonal**:
 
-# 
+1. Centralização
+2. Normalização
+3. Cálculo de M = XᵀY
+4. SVD: UΣVᵀ
+5. W = UVᵀ
 
-# \- Embeddings alinhados do FastText de 300 dimensões
+Essa matriz realiza uma rotação entre os espaços vetoriais, e ignora outros tipos de transformação vetorial.
 
-# \- Dicionário bilíngue
+------------------------------------------------------------------------
 
+## Busca Aproximada (ANN)
 
+Após mapear um vetor inglês:
 
-# Foram carregadas as \*\*200.000 primeiras palavras\*\* de cada idioma,
+v_ru_pred = v_en W
 
-# das quais \*\*5000 pares válidos\*\* foram utilizados para treinamento.
+A busca é realizada apenas nos buckets correspondentes nas múltiplas tabelas hash. Por isso é considerado uma busca aproximada, e não KNN.
 
-# 
+------------------------------------------------------------------------
 
-# ------------------------------------------------------------------------
+## Resultados
+ 
+Foram obtidos resultados interessantes que mostraram que diversas palavras e associações foram aprendidas com sucesso mesmo com o limitante de 5000 palavras. 
 
-# 
 
-# \## Representação Vetorial
+Exemplo para "april":
 
-# 
+- Tradução real: апреля
+- Similaridade: ~0.80
 
-# Cada palavra é representada por um vetor de 300 dimensões.
+Exemplo para "night":
 
-# 
+- Tradução real: ночное
+- Similaridade: ~0.59
 
-# Os vetores são normalizados para que a similaridade de cosseno
+Observou-se que o modelo aprende agrupamentos semânticos,
+como meses do ano ficando próximos no espaço vetorial. Ou a palavra comida ficando perto de palavras como "restaurante" e "pesca".
 
-# represente apenas a direção no espaço vetorial.
 
-# 
 
-# similaridade\_cosseno(a, b) = a · b
+------------------------------------------------------------------------
 
-# 
+## Visualização com PCA
 
-# ------------------------------------------------------------------------
+Para fins de análise, foi aplicado PCA para projetar os embeddings em 2D.
 
-# 
+Isso permitiu visualizar:
 
-# \## Locality Sensitive Hashing (LSH)
+- Vetor previsto
+- Vetor real
+- Top-k palavras mais similares
 
-# 
+Os gráficos mostram que palavras semanticamente relacionadas
+ficam agrupadas no espaço reduzido.
 
-# Foram implementados hiperplanos aleatórios para dividir o espaço vetorial
 
-# em regiões (buckets).
+![PCA Apple](images/apple.png)
+![PCA Restaurant](images/restaurant.png)
+![PCA April](images/april.png)
 
-# 
 
-# Cada plano define um bit do hash:
 
-# 
+------------------------------------------------------------------------
 
-# hash\_i = 1 se (plano · vetor) ≥ 0
+## Tecnologias Utilizadas
 
-# 
+- Python
+- NumPy
+- Gensim
+- FastText
+- Scikit-learn
+- Matplotlib
+- NLTK
+- Jupyter Notebook
 
-# O valor hash final é obtido combinando os bits.
-
-# 
-
-# Foram utilizadas:
-
-# 
-
-# \- 10 dimensões por tabela
-
-# \- 30 tabelas hash independentes
-
-# 
-
-# ------------------------------------------------------------------------
-
-# 
-
-# \## Aprendizado da Matriz de Transformação
-
-# 
-
-# Desejamos aprender uma matriz W tal que:
-
-# 
-
-# XW ≈ Y
-
-# 
-
-# Onde:
-
-# 
-
-# \- X: embeddings em inglês
-
-# \- Y: embeddings em russo
-
-# 
-
-# Foi utilizado o método de \*\*Procrustes Ortogonal\*\*:
-
-# 
-
-# 1\. Centralização
-
-# 2\. Normalização
-
-# 3\. Cálculo de M = XᵀY
-
-# 4\. SVD: UΣVᵀ
-
-# 5\. W = UVᵀ
-
-# 
-
-# Essa matriz realiza uma rotação entre os espaços vetoriais, e ignora outros tipos de transformação vetorial.
-
-# 
-
-# ------------------------------------------------------------------------
-
-# 
-
-# \## Busca Aproximada (ANN)
-
-# 
-
-# Após mapear um vetor inglês:
-
-# 
-
-# v\_ru\_pred = v\_en W
-
-# 
-
-# A busca é realizada apenas nos buckets correspondentes nas múltiplas tabelas hash. Por isso é considerado uma busca aproximada, e não KNN.
-
-# 
-
-# ------------------------------------------------------------------------
-
-# 
-
-# \## Resultados
-
-# &nbsp;
-
-# Foram obtidos resultados interessantes que mostraram que diversas palavras e associações foram aprendidas com sucesso mesmo com o limitante de 5000 palavras. 
-
-
-
-
-
-# Exemplo para "april":
-
-# 
-
-# \- Tradução real: апреля
-
-# \- Similaridade: ~0.80
-
-# 
-
-# Exemplo para "night":
-
-# 
-
-# \- Tradução real: ночное
-
-# \- Similaridade: ~0.59
-
-# 
-
-# Observou-se que o modelo aprende agrupamentos semânticos,
-
-# como meses do ano ficando próximos no espaço vetorial. Ou a palavra comida ficando perto de palavras como "restaurante" e "pesca".
-
-
-
-
-
-# 
-
-# ------------------------------------------------------------------------
-
-# 
-
-# \## Visualização com PCA
-
-# 
-
-# Para fins de análise, foi aplicado PCA para projetar os embeddings em 2D.
-
-# 
-
-# Isso permitiu visualizar:
-
-# 
-
-# \- Vetor previsto
-
-# \- Vetor real
-
-# \- Top-k palavras mais similares
-
-# 
-
-# Os gráficos mostram que palavras semanticamente relacionadas
-
-# ficam agrupadas no espaço reduzido.
-
-# 
-
-
-
-# !\[PCA Apple](images/apple.png)
-
-# !\[PCA Restaurant](images/restaurant.png)
-
-# !\[PCA April](images/april.png)
-
-
-
-
-
-
-
-# ------------------------------------------------------------------------
-
-# 
-
-# \## Tecnologias Utilizadas
-
-# 
-
-# \- Python
-
-# \- NumPy
-
-# \- Gensim
-
-# \- FastText
-
-# \- Scikit-learn
-
-# \- Matplotlib
-
-# \- NLTK
-
-# \- Jupyter Notebook
-
-# 
-
-# ------------------------------------------------------------------------
-
-# 
-
+------------------------------------------------------------------------
