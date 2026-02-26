@@ -143,7 +143,7 @@ ficam agrupadas no espaço reduzido.
 
 
 ![PCA Apple](images/apple.png)
-![PCA Restaurant](images/restaurant.png)
+![PCA Food](images/food.png)
 ![PCA April](images/april.png)
 
 
